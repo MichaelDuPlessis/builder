@@ -12,7 +12,7 @@ use crate::attribute::BuilderAttribute;
 #[proc_macro_derive(Builder, attributes(single))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as syn::DeriveInput);
-    println!("{:#?}", ast);
+    // println!("{:#?}", ast);
 
     let builder = create_builder(&ast);
 
@@ -57,11 +57,13 @@ fn create_funcs(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
         let mut extra_funcs = Vec::new();
 
         if !attrs.is_empty() {
+            println!("{:#?}", attrs);
             for attr in attrs {
                 match attr {
                     BuilderAttribute::Single(single) => {
-                        if &single.ident == name.unwrap() {
-                            let new_name = single.ident;
+                        if &single.name == name.unwrap() {
+                            let new_name = single.name;
+                            let method = single.method;
                             let (wrapper, inner_ty) =
                                 helper::inner_type(ty).expect("Invalid attribute");
 
@@ -71,12 +73,13 @@ fn create_funcs(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
                                         self.#name = std::option::Option::Some(#wrapper::new());
                                     }
 
-                                    self.#name.as_mut().unwrap().push(#new_name.into());
+                                    self.#name.as_mut().unwrap().#method(#new_name.into());
                                     self
                                 }
                             };
                         } else {
-                            let new_name = single.ident;
+                            let new_name = single.name;
+                            let method = single.method;
                             let (wrapper, inner_ty) =
                                 helper::inner_type(ty).expect("Invalid attribute");
 
@@ -86,7 +89,7 @@ fn create_funcs(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
                                         self.#name = std::option::Option::Some(#wrapper::new());
                                     }
 
-                                    self.#name.as_mut().unwrap().push(#new_name.into());
+                                    self.#name.as_mut().unwrap().#method(#new_name.into());
                                     self
                                 }
                             })
@@ -147,9 +150,14 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
             }
         }
     });
+    let builder_construct = helper::name_type_iter(named).map(|(name, _, _)| {
+        quote! {
+            #name: None
+        }
+    });
 
     quote! {
-        struct #builder_name {
+        pub struct #builder_name {
             #fields
         }
 
@@ -166,6 +174,14 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
                 Ok(#struct_name {
                     #(#build_methods_consume),*
                 })
+            }
+        }
+
+        impl #struct_name {
+            pub fn builder() -> #builder_name {
+                #builder_name {
+                    #(#builder_construct),*
+                }
             }
         }
     }

@@ -1,13 +1,23 @@
 use generic_builder::Builder;
 
-#[derive(Builder)]
-struct Test {
-    param1: Option<String>,
-    param2: String,
-    #[single(param3)]
-    param3: Vec<u8>,
+#[derive(Builder, Debug)]
+pub struct Command {
+    executable: String,
+    #[single(arg, push)]
+    args: Vec<String>,
+    env: Vec<String>,
+    current_dir: Option<String>,
 }
 
-fn main() {
-    println!("Hello, world!");
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let command = Command::builder()
+        .executable(String::from("rm"))
+        .arg(String::from("-rf"))
+        .arg("/")
+        .env(Vec::new())
+        .build()?;
+
+    println!("{:#?}", command);
+
+    Ok(())
 }

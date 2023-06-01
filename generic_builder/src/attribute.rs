@@ -1,4 +1,4 @@
-use syn::{self, parse_macro_input};
+use syn::{self, Token};
 
 #[derive(Debug)]
 pub enum BuilderAttribute {
@@ -25,13 +25,16 @@ impl BuilderAttribute {
 
 #[derive(Debug)]
 pub struct SingleAttribute {
-    pub ident: syn::Ident,
+    // pub punct: syn::punctuated::Punctuated<syn::Ident, Token![,]>,
+    pub name: syn::Ident,
+    pub method: syn::Ident,
 }
 
 impl syn::parse::Parse for SingleAttribute {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        Ok(Self {
-            ident: input.parse()?,
-        })
+        let mut punct = input.parse_terminated(syn::Ident::parse, Token![,])?;
+        let method = punct.pop().unwrap().into_value();
+        let name = punct.pop().unwrap().into_value();
+        Ok(Self { name, method })
     }
 }
