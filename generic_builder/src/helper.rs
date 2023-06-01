@@ -8,13 +8,23 @@ pub fn create_builder_name(ast: &syn::DeriveInput) -> syn::Ident {
     syn::Ident::new(&format!("{struct_name}Builder"), struct_name.span())
 }
 
-pub type NameTypeIterator<'a> =
-    Box<dyn Iterator<Item = (Option<&'a syn::Ident>, &'a syn::Type)> + 'a>;
+pub type NameTypeIterator<'a> = Box<
+    dyn Iterator<
+            Item = (
+                Option<&'a syn::Ident>,
+                &'a syn::Type,
+                &'a Vec<syn::Attribute>,
+            ),
+        > + 'a,
+>;
 
 pub fn name_type_iter<'a>(
     punc: &'a syn::punctuated::Punctuated<syn::Field, syn::Token![,]>,
 ) -> NameTypeIterator<'a> {
-    Box::new(punc.iter().map(|field| (field.ident.as_ref(), &field.ty)))
+    Box::new(
+        punc.iter()
+            .map(|field| (field.ident.as_ref(), &field.ty, &field.attrs)),
+    )
 }
 
 pub fn is(ty: &syn::Type, wrapper: impl Into<&'static str>) -> Option<&syn::Type> {

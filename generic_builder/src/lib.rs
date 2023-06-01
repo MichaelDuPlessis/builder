@@ -1,4 +1,4 @@
-mod builder_attribute;
+mod attribute;
 mod helper;
 
 use helper::NameTypeIterator;
@@ -10,7 +10,7 @@ use syn::parse_macro_input;
 #[proc_macro_derive(Builder, attributes(single))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as syn::DeriveInput);
-    // println!("{:#?}", ast);
+    println!("{:#?}", ast);
 
     let builder = create_builder(&ast);
 
@@ -21,7 +21,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 }
 
 fn create_fields(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
-    let fields = name_type.map(|(name, ty)| {
+    let fields = name_type.map(|(name, ty, _)| {
         let ty = if let Some(ty) = helper::is(ty, "Option") {
             ty
         } else {
@@ -39,7 +39,7 @@ fn create_fields(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
 }
 
 fn create_funcs(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
-    let funcs = name_type.map(|(name, ty)| {
+    let funcs = name_type.map(|(name, ty, _)| {
         let ty = if let Some(ty) = helper::is(ty, "Option") {
             ty
         } else {
@@ -76,7 +76,7 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
     // getting builder structs methods
     let funcs = create_funcs(helper::name_type_iter(named));
     // creating build methods
-    let build_methods = helper::name_type_iter(named).map(|(name, ty)| {
+    let build_methods = helper::name_type_iter(named).map(|(name, ty, _)| {
         if helper::is(ty, "Option").is_some() {
             quote! {
                 #name: self.#name.clone()
@@ -88,7 +88,7 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
         }
     });
     // for when we want to consume the builder
-    let build_methods_consume = helper::name_type_iter(named).map(|(name, ty)| {
+    let build_methods_consume = helper::name_type_iter(named).map(|(name, ty, _)| {
         if helper::is(ty, "Option").is_some() {
             quote! {
                 #name: self.#name
