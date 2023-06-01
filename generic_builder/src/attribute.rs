@@ -6,8 +6,8 @@ pub enum BuilderAttribute {
 }
 
 impl BuilderAttribute {
-    pub fn new(field: syn::Attribute) -> Self {
-        let syn::Meta::List (syn::MetaList { tokens, path: syn::Path {segments, ..},..}) = field.meta else {
+    pub fn new(field: &syn::Attribute) -> Self {
+        let syn::Meta::List (syn::MetaList { ref tokens, path: syn::Path {ref segments, ..},..}) = field.meta else {
             panic!("Invalid attribute")
         };
         let Some(syn::PathSegment {ident, ..}) = segments.first() else {
@@ -15,7 +15,7 @@ impl BuilderAttribute {
         };
 
         if ident == "single" {
-            let ast = syn::parse2(tokens).unwrap();
+            let ast = syn::parse2(tokens.clone()).unwrap();
             Self::Single(ast)
         } else {
             panic!("Cannot get there")
@@ -25,7 +25,7 @@ impl BuilderAttribute {
 
 #[derive(Debug)]
 pub struct SingleAttribute {
-    ident: syn::Ident,
+    pub ident: syn::Ident,
 }
 
 impl syn::parse::Parse for SingleAttribute {
