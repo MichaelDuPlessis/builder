@@ -57,7 +57,6 @@ fn create_funcs(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
         let mut extra_funcs = Vec::new();
 
         if !attrs.is_empty() {
-            println!("{:#?}", attrs);
             for attr in attrs {
                 match attr {
                     BuilderAttribute::Single(single) => {
