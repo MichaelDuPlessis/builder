@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use generic_builder::Builder;
 
 #[derive(Builder, Debug)]
@@ -6,7 +8,8 @@ pub struct Command {
     #[single(arg, push)]
     args: Vec<String>,
     env: Vec<String>,
-    current_dir: Option<String>,
+    #[single(current_dir, insert)]
+    current_dir: Option<HashSet<String>>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -15,6 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .arg(String::from("-rf"))
         .arg("/")
         .env(Vec::new())
+        .current_dir("test")
         .build()?;
 
     println!("{:#?}", command);
