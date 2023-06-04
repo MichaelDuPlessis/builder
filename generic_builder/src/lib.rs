@@ -1,7 +1,7 @@
 mod attribute;
 mod helper;
 
-use helper::NameTypeIterator;
+use helper::NameType;
 use proc_macro::TokenStream;
 use proc_macro2;
 use quote::quote;
@@ -22,8 +22,8 @@ pub fn derive(input: TokenStream) -> TokenStream {
     .into()
 }
 
-fn create_fields(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
-    let fields = name_type.map(|(name, ty, _)| {
+fn create_fields(name_type: &NameType) -> proc_macro2::TokenStream {
+    let fields = name_type.iter().map(|(name, ty, _)| {
         let ty = if let Some(ty) = helper::is(ty, "Option") {
             ty
         } else {
@@ -40,8 +40,8 @@ fn create_fields(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
     }
 }
 
-fn create_funcs(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
-    let funcs = name_type.map(|(name, ty, attrs)| {
+fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
+    let funcs = name_type.iter().map(|(name, ty, attrs)| {
         let ty = if let Some(ty) = helper::is(ty, "Option") {
             ty
         } else {
@@ -60,12 +60,11 @@ fn create_funcs(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
             for attr in attrs {
                 match attr {
                     BuilderAttribute::Single(single) => {
-                        if &single.name == name.unwrap() {
-                            let new_name = single.name;
-                            let method = single.method;
-                            let (wrapper, inner_ty) =
-                                helper::inner_type(ty).expect("Invalid attribute");
+                        let new_name = &single.name;
+                        let method = &single.method;
+                        let (wrapper, inner_ty) = helper::inner_type(ty).expect("Invalid attribute");
 
+                        if &single.name == name.unwrap() {
                             func = quote! {
                                 pub fn #new_name(&mut self, #new_name: impl std::convert::Into<#inner_ty>) -> &mut Self {
                                     if self.#name.is_none() {
@@ -77,11 +76,6 @@ fn create_funcs(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
                                 }
                             };
                         } else {
-                            let new_name = single.name;
-                            let method = single.method;
-                            let (wrapper, inner_ty) =
-                                helper::inner_type(ty).expect("Invalid attribute");
-
                             extra_funcs.push(quote! {
                                 pub fn #new_name(&mut self, #new_name: impl std::convert::Into<#inner_ty>) -> &mut Self {
                                     if self.#name.is_none() {
@@ -91,7 +85,7 @@ fn create_funcs(name_type: NameTypeIterator) -> proc_macro2::TokenStream {
                                     self.#name.as_mut().unwrap().#method(#new_name.into());
                                     self
                                 }
-                            })
+                            });
                         }
                     }
                 }
@@ -120,13 +114,14 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
     // getting names of structs
     let struct_name = &ast.ident;
     let builder_name = helper::create_builder_name(ast);
+    let name_type = helper::name_type(named);
 
     // getting builder structs fields
-    let fields = create_fields(helper::name_type_iter(named));
+    let fields = create_fields(&name_type);
     // getting builder structs methods
-    let funcs = create_funcs(helper::name_type_iter(named));
+    let funcs = create_funcs(&name_type);
     // creating build methods
-    let build_methods = helper::name_type_iter(named).map(|(name, ty, _)| {
+    let build_methods = name_type.iter().map(|(name, ty, _)| {
         if helper::is(ty, "Option").is_some() {
             quote! {
                 #name: self.#name.clone()
@@ -138,7 +133,7 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
         }
     });
     // for when we want to consume the builder
-    let build_methods_consume = helper::name_type_iter(named).map(|(name, ty, _)| {
+    let build_methods_consume = name_type.iter().map(|(name, ty, _)| {
         if helper::is(ty, "Option").is_some() {
             quote! {
                 #name: self.#name
@@ -149,7 +144,7 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
             }
         }
     });
-    let builder_construct = helper::name_type_iter(named).map(|(name, _, _)| {
+    let builder_construct = name_type.iter().map(|(name, _, _)| {
         quote! {
             #name: None
         }
