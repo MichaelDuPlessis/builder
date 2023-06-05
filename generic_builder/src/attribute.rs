@@ -25,16 +25,28 @@ impl BuilderAttribute {
 
 #[derive(Debug)]
 pub struct SingleAttribute {
-    // pub punct: syn::punctuated::Punctuated<syn::Ident, Token![,]>,
-    pub name: syn::Ident,
+    pub func_name: syn::Ident,
     pub method: syn::Ident,
+    pub vars: syn::LitInt,
 }
 
 impl syn::parse::Parse for SingleAttribute {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let mut punct = input.parse_terminated(syn::Ident::parse, Token![,])?;
-        let method = punct.pop().unwrap().into_value();
-        let name = punct.pop().unwrap().into_value();
-        Ok(Self { name, method })
+        let func_name = input.parse::<syn::Ident>()?;
+        input.parse::<Token![,]>()?;
+        let method = input.parse::<syn::Ident>()?;
+        // if there is not a trailing comma
+        let vars = if input.parse::<Token![,]>().is_err() {
+            input.parse::<syn::parse::Nothing>()?;
+            proc_macro2::Literal::u64_unsuffixed(1).into()
+        } else {
+            input.parse()?
+        };
+
+        Ok(Self {
+            func_name,
+            method,
+            vars,
+        })
     }
 }

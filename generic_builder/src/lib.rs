@@ -7,7 +7,7 @@ use proc_macro2;
 use quote::quote;
 use syn::parse_macro_input;
 
-use crate::attribute::BuilderAttribute;
+use crate::attribute::{BuilderAttribute, SingleAttribute};
 
 #[proc_macro_derive(Builder, attributes(single))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -57,35 +57,33 @@ fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
         let mut extra_funcs = Vec::new();
 
         if !attrs.is_empty() {
+            println!("{:#?}", attrs);
             for attr in attrs {
                 match attr {
                     BuilderAttribute::Single(single) => {
-                        let new_name = &single.name;
-                        let method = &single.method;
-                        let (wrapper, inner_ty) = helper::inner_type(ty).expect("Invalid attribute");
+                        let SingleAttribute {
+                            func_name,
+                            method,
+                            vars,
+                        } = single;
 
-                        if &single.name == name.unwrap() {
-                            func = quote! {
-                                pub fn #new_name(&mut self, #new_name: impl std::convert::Into<#inner_ty>) -> &mut Self {
+                        let (_, inner_ty) = helper::inner_type(ty).expect("Invalid attribute");
+                        let single_func = quote! {
+                                pub fn #func_name(&mut self, #func_name: impl std::convert::Into<#inner_ty>) -> &mut Self {
                                     if self.#name.is_none() {
-                                        self.#name = std::option::Option::Some(#wrapper::new());
+                                        self.#name = std::option::Option::Some(std::default::Default::default());
                                     }
 
-                                    self.#name.as_mut().unwrap().#method(#new_name.into());
+                                    self.#name.as_mut().unwrap().#method(#func_name.into());
                                     self
                                 }
-                            };
+                            }; 
+
+                        // can unwrap since all fields have names in named struct
+                        if func_name == name.unwrap() {
+                            func = single_func;
                         } else {
-                            extra_funcs.push(quote! {
-                                pub fn #new_name(&mut self, #new_name: impl std::convert::Into<#inner_ty>) -> &mut Self {
-                                    if self.#name.is_none() {
-                                        self.#name = std::option::Option::Some(#wrapper::new());
-                                    }
-
-                                    self.#name.as_mut().unwrap().#method(#new_name.into());
-                                    self
-                                }
-                            });
+                            extra_funcs.push(single_func);
                         }
                     }
                 }
@@ -108,7 +106,7 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
         fields: syn::Fields::Named(syn::FieldsNamed { ref named, .. }),
         ..
     }) = ast.data else {
-        unimplemented!()
+        panic!("Builder only accepts named structs")
     };
 
     // getting names of structs
@@ -146,7 +144,7 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
     });
     let builder_construct = name_type.iter().map(|(name, _, _)| {
         quote! {
-            #name: None
+            #name: std::option::Option::None
         }
     });
 
@@ -159,7 +157,7 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
             #funcs
 
             pub fn build(&self) -> std::result::Result<#struct_name, std::boxed::Box<dyn std::error::Error>> {
-                Ok(#struct_name {
+                std::result::Result::Ok(#struct_name {
                     #(#build_methods),*
                 })
             }
