@@ -29,8 +29,8 @@ pub fn name_type<'a>(
     .collect()
 }
 
-pub fn is(ty: &syn::Type, wrapper: impl Into<&'static str>) -> Option<&syn::Type> {
-    if let Some(inner) = inner_type(ty) {
+pub fn is(ty: &syn::Type, wrapper: impl Into<&'static str>) -> Option<Vec<&syn::Type>> {
+    if let Some(inner) = inner_types(ty) {
         if inner.0 == wrapper.into() {
             return Some(inner.1);
         }
@@ -39,7 +39,7 @@ pub fn is(ty: &syn::Type, wrapper: impl Into<&'static str>) -> Option<&syn::Type
     None
 }
 
-pub fn inner_type(ty: &syn::Type) -> Option<(&syn::Ident, &syn::Type)> {
+pub fn inner_types(ty: &syn::Type) -> Option<(&syn::Ident, Vec<&syn::Type>)> {
     let syn::Type::Path(syn::TypePath {
         path: syn::Path { ref segments, .. },
         ..
@@ -55,13 +55,20 @@ pub fn inner_type(ty: &syn::Type) -> Option<(&syn::Ident, &syn::Type)> {
         return None;
     };
 
-    let Some(generic_arg) = args.first() else {
+    if args.is_empty() {
         return None;
-    };
-
-    if let syn::GenericArgument::Type(ty) = generic_arg {
-        Some((&segment.ident, ty))
-    } else {
-        None
     }
+
+    let tys = args
+        .iter()
+        .map(|generic| {
+            let syn::GenericArgument::Type(ty) = generic else {
+            panic!("Not a generic argument")
+        };
+
+            ty
+        })
+        .collect();
+
+    Some((&segment.ident, tys))
 }

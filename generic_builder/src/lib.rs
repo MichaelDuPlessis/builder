@@ -25,7 +25,8 @@ pub fn derive(input: TokenStream) -> TokenStream {
 fn create_fields(name_type: &NameType) -> proc_macro2::TokenStream {
     let fields = name_type.iter().map(|(name, ty, _)| {
         let ty = if let Some(ty) = helper::is(ty, "Option") {
-            ty
+            // since ty is option it has only one generic argument
+            ty[0]
         } else {
             ty
         };
@@ -43,7 +44,8 @@ fn create_fields(name_type: &NameType) -> proc_macro2::TokenStream {
 fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
     let funcs = name_type.iter().map(|(name, ty, attrs)| {
         let ty = if let Some(ty) = helper::is(ty, "Option") {
-            ty
+            // since ty is option it has only one generic argument
+            ty[0]
         } else {
             ty
         };
@@ -57,7 +59,6 @@ fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
         let mut extra_funcs = Vec::new();
 
         if !attrs.is_empty() {
-            println!("{:#?}", attrs);
             for attr in attrs {
                 match attr {
                     BuilderAttribute::Single(single) => {
@@ -67,14 +68,24 @@ fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
                             vars,
                         } = single;
 
-                        let (_, inner_ty) = helper::inner_type(ty).expect("Invalid attribute");
+                        let (_, inner_tys) = helper::inner_types(ty).expect("Invalid attribute");
+                        let params = (0..inner_tys.len()).map(|i| {
+                           syn::Ident::new(&format!("{}{}", func_name, i), func_name.span())
+                        });
+
+                        let params_ty = params.clone().zip(inner_tys).map(|(param, ty)| {
+                            quote! {
+                                #param: impl std::convert::Into<#ty>
+                            }
+                        });
+
                         let single_func = quote! {
-                                pub fn #func_name(&mut self, #func_name: impl std::convert::Into<#inner_ty>) -> &mut Self {
+                                pub fn #func_name(&mut self, #(#params_ty),*) -> &mut Self {
                                     if self.#name.is_none() {
                                         self.#name = std::option::Option::Some(std::default::Default::default());
                                     }
 
-                                    self.#name.as_mut().unwrap().#method(#func_name.into());
+                                    self.#name.as_mut().unwrap().#method(#(#params.into())*);
                                     self
                                 }
                             }; 
