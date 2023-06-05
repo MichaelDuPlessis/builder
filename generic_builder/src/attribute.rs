@@ -27,7 +27,6 @@ impl BuilderAttribute {
 pub struct SingleAttribute {
     pub func_name: syn::Ident,
     pub method: syn::Ident,
-    pub vars: usize,
 }
 
 impl syn::parse::Parse for SingleAttribute {
@@ -36,21 +35,10 @@ impl syn::parse::Parse for SingleAttribute {
         input.parse::<Token![,]>()?;
         let method = input.parse::<syn::Ident>()?;
         // if there is not a trailing comma
-        let vars = if input.parse::<Token![,]>().is_err() {
-            // give default value of 1
+        if input.parse::<Token![,]>().is_err() {
             input.parse::<syn::parse::Nothing>()?;
-            proc_macro2::Literal::u64_unsuffixed(1).into()
-        } else {
-            // give inputed valued
-            input.parse::<syn::LitInt>()?
-        };
-        // converting to usize
-        let vars = vars.base10_parse()?;
+        }
 
-        Ok(Self {
-            func_name,
-            method,
-            vars,
-        })
+        Ok(Self { func_name, method })
     }
 }

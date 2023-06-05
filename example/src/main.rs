@@ -10,7 +10,7 @@ pub struct Command {
     env: Vec<String>,
     current_dir: Option<String>,
     #[single(t, insert)]
-    test: HashMap<u8, Vec<String>>,
+    test: Option<HashMap<u8, Vec<String>>>,
     // test: HashSet<u8>,
 }
 
@@ -21,6 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .arg("/")
         .env(Vec::new())
         .current_dir("test")
+        .t(0, Vec::new())
         .build()?;
 
     println!("{:#?}", command);

@@ -65,7 +65,6 @@ fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
                         let SingleAttribute {
                             func_name,
                             method,
-                            vars,
                         } = single;
 
                         let (_, inner_tys) = helper::inner_types(ty).expect("Invalid attribute");
@@ -85,7 +84,7 @@ fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
                                         self.#name = std::option::Option::Some(std::default::Default::default());
                                     }
 
-                                    self.#name.as_mut().unwrap().#method(#(#params.into())*);
+                                    self.#name.as_mut().unwrap().#method(#(#params.into()),*);
                                     self
                                 }
                             }; 
