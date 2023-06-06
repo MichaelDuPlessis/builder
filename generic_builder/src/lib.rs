@@ -51,7 +51,7 @@ fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
         };
 
         let mut func = quote! {
-            pub fn #name(&mut self, #name: impl std::convert::Into<#ty>) -> &mut Self {
+            pub fn #name(mut self, #name: impl std::convert::Into<#ty>) -> Self {
                 self.#name = Some(#name.into());
                 self
             }
@@ -79,7 +79,7 @@ fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
                         });
 
                         let single_func = quote! {
-                                pub fn #func_name(&mut self, #(#params_ty),*) -> &mut Self {
+                                pub fn #func_name(mut self, #(#params_ty),*) -> Self {
                                     if self.#name.is_none() {
                                         self.#name = std::option::Option::Some(std::default::Default::default());
                                     }

@@ -17,8 +17,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .arg(String::from("-rf"))
         .arg("/")
         .env(Vec::new());
-        .build_consume()?;
-
+    command.build()?;
+    command.build()?;
+    let command = command.build()?;
     println!("{:#?}", command);
 
     Ok(())
