@@ -119,6 +119,26 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
         panic!("Builder only accepts named structs")
     };
 
+    // getting generics
+    let syn::DeriveInput {
+        generics: syn::Generics {
+            params,
+            ..
+        },
+        ..
+    } = ast;
+    let generics = params.iter().map(|p| if let syn::GenericParam::Type(ty) = p {
+        ty
+    } else {
+        panic!("Not a valid generic argument.")
+    }).collect::<Vec<_>>();
+    // since we don't always want the trait bound
+    let generics_no_bounds = params.iter().map(|p| if let syn::GenericParam::Type(ty) = p {
+        &ty.ident
+    } else {
+        panic!("Not a valid generic argument.")
+    }).collect::<Vec<_>>();
+
     // getting names of structs
     let struct_name = &ast.ident;
     let builder_name = helper::create_builder_name(ast);
@@ -159,29 +179,29 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
     });
 
     quote! {
-        pub struct #builder_name {
+        pub struct #builder_name<#(#generics),*> {
             #fields
         }
 
-        impl #builder_name {
+        impl<#(#generics),*> #builder_name<#(#generics_no_bounds),*> {
             #funcs
 
-            pub fn build(&self) -> std::result::Result<#struct_name, std::boxed::Box<dyn std::error::Error>> {
+            pub fn build(&self) -> std::result::Result<#struct_name<#(#generics_no_bounds),*>, std::boxed::Box<dyn std::error::Error>> {
                 std::result::Result::Ok(#struct_name {
                     #(#build_methods),*
                 })
             }
 
-            pub fn build_consume(self) -> std::result::Result<#struct_name, std::boxed::Box<dyn std::error::Error>> {
+            pub fn build_consume(self) -> std::result::Result<#struct_name<#(#generics_no_bounds),*>, std::boxed::Box<dyn std::error::Error>> {
                 Ok(#struct_name {
                     #(#build_methods_consume),*
                 })
             }
         }
 
-        impl #struct_name {
-            pub fn builder() -> #builder_name {
-                #builder_name {
+        impl<#(#generics),*> #struct_name<#(#generics_no_bounds),*> {
+            pub fn builder() -> #builder_name<#(#generics_no_bounds),*> {
+                #builder_name{
                     #(#builder_construct),*
                 }
             }

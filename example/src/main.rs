@@ -9,9 +9,6 @@ pub struct Command {
     args: Vec<String>,
     env: Vec<String>,
     current_dir: Option<String>,
-    #[single(t, insert)]
-    test: Option<HashMap<u8, Vec<String>>>,
-    // test: HashSet<u8>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,10 +16,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .executable(String::from("rm"))
         .arg(String::from("-rf"))
         .arg("/")
-        .env(Vec::new())
-        .current_dir("test")
-        .t(0, Vec::new())
-        .build()?;
+        .env(Vec::new());
+        .build_consume()?;
 
     println!("{:#?}", command);
 
