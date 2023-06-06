@@ -138,6 +138,21 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
     } else {
         panic!("Not a valid generic argument.")
     }).collect::<Vec<_>>();
+    // since builder can only be reusable if all members implement clone
+    let generics_clone_bound = params.iter().map(|p| if let syn::GenericParam::Type(ty) = p {
+        let ident = &ty.ident;
+        if ty.bounds.is_empty() {
+            quote! {
+                #ident: std::clone::Clone
+            }
+        } else {
+            quote! {
+                #ty + std::clone::Clone
+            }
+        }
+    } else {
+        panic!("Not a valid generic argument.")
+    }).collect::<Vec<_>>();
 
     // getting names of structs
     let struct_name = &ast.ident;
@@ -186,15 +201,18 @@ fn create_builder(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
         impl<#(#generics),*> #builder_name<#(#generics_no_bounds),*> {
             #funcs
 
-            pub fn build(&self) -> std::result::Result<#struct_name<#(#generics_no_bounds),*>, std::boxed::Box<dyn std::error::Error>> {
-                std::result::Result::Ok(#struct_name {
-                    #(#build_methods),*
-                })
-            }
 
             pub fn build_consume(self) -> std::result::Result<#struct_name<#(#generics_no_bounds),*>, std::boxed::Box<dyn std::error::Error>> {
                 Ok(#struct_name {
                     #(#build_methods_consume),*
+                })
+            }
+        }
+
+        impl<#(#generics_clone_bound),*> #builder_name<#(#generics_no_bounds),*> {
+            pub fn build(&self) -> std::result::Result<#struct_name<#(#generics_no_bounds),*>, std::boxed::Box<dyn std::error::Error>> {
+                std::result::Result::Ok(#struct_name {
+                    #(#build_methods),*
                 })
             }
         }
