@@ -6,10 +6,9 @@ use proc_macro::TokenStream;
 use proc_macro2;
 use quote::quote;
 use syn::parse_macro_input;
+use crate::attribute::{BuilderAttribute, AutoAttribute, ManualAttribute};
 
-use crate::attribute::{BuilderAttribute, SingleAttribute};
-
-#[proc_macro_derive(Builder, attributes(single))]
+#[proc_macro_derive(Builder, attributes(single, multiple))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as syn::DeriveInput);
     // println!("{:#?}", ast);
@@ -61,11 +60,11 @@ fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
         if !attrs.is_empty() {
             for attr in attrs {
                 match attr {
-                    BuilderAttribute::Single(single) => {
-                        let SingleAttribute {
+                    BuilderAttribute::Auto(auto) => {
+                        let AutoAttribute {
                             func_name,
                             method,
-                        } = single;
+                        } = auto;
 
                         let (_, inner_tys) = helper::inner_types(ty).expect("Invalid attribute");
                         let params = (0..inner_tys.len()).map(|i| {
@@ -96,6 +95,43 @@ fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
                             extra_funcs.push(single_func);
                         }
                     }
+                    BuilderAttribute::Manual(manual) => {
+                        let ManualAttribute {
+                            single: AutoAttribute {
+                                func_name,
+                                method,
+                            },
+                            types,
+                        } = manual;
+
+                        let params = (0..types.len()).map(|i|
+                           syn::Ident::new(&format!("{}{}", func_name, i), func_name.span())
+                        );
+
+                        let param_types = params.clone().zip(types).map(|(param, ty)| quote! {
+                            #param: impl std::convert::Into<#ty>
+                        });
+
+                        // println!("{:#?}", param_types);
+
+                        let single_func = quote! {
+                                pub fn #func_name(mut self, #(#param_types),*) -> Self {
+                                    if self.#name.is_none() {
+                                        self.#name = std::option::Option::Some(std::default::Default::default());
+                                    }
+
+                                    self.#name.as_mut().unwrap().#method(#(#params.into()),*);
+                                    self
+                                }
+                            }; 
+
+                        // can unwrap since all fields have names in named struct
+                        if func_name == name.unwrap() {
+                            func = single_func;
+                        } else {
+                            extra_funcs.push(single_func);
+                        }
+                    },
                 }
             }
         }

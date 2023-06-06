@@ -1,8 +1,10 @@
 use syn::{self, Token};
 
+// the different kind of attributes there re
 #[derive(Debug)]
 pub enum BuilderAttribute {
-    Single(SingleAttribute),
+    Auto(AutoAttribute),
+    Manual(ManualAttribute),
 }
 
 impl BuilderAttribute {
@@ -16,20 +18,40 @@ impl BuilderAttribute {
 
         if ident == "single" {
             let ast = syn::parse2(tokens.clone()).unwrap();
-            Self::Single(ast)
+            Self::Auto(ast)
+        } else if ident == "multiple" {
+            let ast = syn::parse2(tokens.clone()).unwrap();
+            Self::Manual(ast)
         } else {
             panic!("Cannot get there")
         }
     }
 }
 
+// used for when the mutliple attribute is used
 #[derive(Debug)]
-pub struct SingleAttribute {
+pub struct ManualAttribute {
+    pub single: AutoAttribute,
+    pub types: syn::punctuated::Punctuated<syn::Type, Token![,]>,
+}
+
+impl syn::parse::Parse for ManualAttribute {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let single = input.parse()?;
+        let types = input.parse_terminated(syn::Type::parse, Token![,])?;
+
+        Ok(Self { single, types })
+    }
+}
+
+// used for when the single attribute is used
+#[derive(Debug)]
+pub struct AutoAttribute {
     pub func_name: syn::Ident,
     pub method: syn::Ident,
 }
 
-impl syn::parse::Parse for SingleAttribute {
+impl syn::parse::Parse for AutoAttribute {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let func_name = input.parse::<syn::Ident>()?;
         input.parse::<Token![,]>()?;
