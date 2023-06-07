@@ -16,10 +16,10 @@ impl BuilderAttribute {
             panic!("Invalid attribute")
         };
 
-        if ident == "single" {
+        if ident == "auto" {
             let ast = syn::parse2(tokens.clone()).unwrap();
             Self::Auto(ast)
-        } else if ident == "multiple" {
+        } else if ident == "manual" {
             let ast = syn::parse2(tokens.clone()).unwrap();
             Self::Manual(ast)
         } else {
