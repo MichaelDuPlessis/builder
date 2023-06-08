@@ -112,8 +112,6 @@ fn create_funcs(name_type: &NameType) -> proc_macro2::TokenStream {
                             #param: impl std::convert::Into<#ty>
                         });
 
-                        // println!("{:#?}", param_types);
-
                         let single_func = quote! {
                                 pub fn #func_name(mut self, #(#param_types),*) -> Self {
                                     if self.#name.is_none() {

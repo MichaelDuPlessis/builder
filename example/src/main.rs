@@ -2,8 +2,12 @@ use std::collections::HashMap;
 
 use generic_builder::Builder;
 
+struct MyStuct {
+    something: u8.
+}
+
 #[derive(Builder, Debug)]
-pub struct Command<T: Clone + Into<String>> {
+pub struct Command<T> {
     executable: String,
     #[auto(arg, push)]
     args: Vec<T>,
@@ -14,17 +18,7 @@ pub struct Command<T: Clone + Into<String>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let command = Command::<String>::builder()
-        .executable(String::from("rm"))
-        .arg(String::from("-rf"))
-        .arg("/")
-        // .t(0, "hello")
-        .env(Vec::new());
-    command.build()?;
-    command.build()?;
-    command.build()?;
-    let command = command.build_consume()?;
-    println!("{:#?}", command);
+    let command = Command::<MyStuct>::builder();
 
     Ok(())
 }
