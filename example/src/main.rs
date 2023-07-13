@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use generic_builder::Builder;
 
 struct MyStuct {
-    something: u8.
+    something: u8,
 }
 
 #[derive(Builder, Debug)]
